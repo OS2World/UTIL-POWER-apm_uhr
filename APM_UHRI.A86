@@ -1,0 +1,164 @@
+Zeitschranke            equ 10 ; maximale Abweichung 10 Sekunden
+
+; Takte am Tag/Sekunden am Tag
+; 01800b0     /24*60*60
+; 18,2..
+; 19663       /1080
+
+faktor__18_2            equ 19663
+divisor__18_2           equ 1080
+
+even 010
+;***************************************************************************
+
+int_1a_org:
+int_1a_org_o            dw ?
+int_1a_org_s            dw ?
+
+alter_cx_wert:          db '˛˛'
+alter_dh_wert:          db '˛'
+
+int_1a_neu:
+                        pushf
+                          cmp ah,000 ; Frage nach "Takte seit Mitternacht"
+                          jz funktion_000
+                        popf
+                        jmp d cs:[int_1a_org]
+
+;***************************************************************************
+
+umformung_von_bcd:
+                        sub ah,ah
+                        shl ax,4
+                        shr al,4
+                        aad 10
+                        ret
+;***************************************************************************
+
+
+funktion_000:
+                        ;popf
+                        ;pushf                 ; Frage doch mal
+                        call d cs:[int_1a_org]
+
+
+                        ; Ist der Vergleich wieder mal fÑllig ?
+                        ; alle 256/18.2 also alle 14 Sekunden
+                        cmp cx,w cs:[alter_cx_wert]
+                        jnz test_notwendig
+
+                        ; nur dl darf anders sein
+                        cmp dh,b cs:[alter_dh_wert]
+                        jnz test_notwendig
+
+                        iret
+
+test_notwendig:
+                        push si
+                          push di
+                            push ax
+                              push bx
+                                push cx
+                                  push dx
+
+bios_fehler:
+                                    mov ah,002      ; Frage nach richtigen Werten (RTC)
+                                    pushf
+                                    call d cs:[int_1a_org]
+                                    ; if c int 3
+                                    jc bios_fehler
+
+
+                                    mov al,dh  ; Sekunden in BCD
+                                    call umformung_von_bcd
+                                    mov si,ax
+                                    sub di,di
+
+
+                                    mov al,cl  ; Minuten in BCD
+                                    call umformung_von_bcd
+                                    mov dl,60
+                                    mul dl                  ; ax:=al*60
+                                    add si,ax
+
+
+                                    mov al,ch  ; Stunden in BCD
+                                    call umformung_von_bcd
+                                    mov dx,60*60
+                                    mul dx     ; dx:ax:=ax*60*60
+                                    add si,ax
+                                    adc di,dx  ; di:si:=Sekunden seit Mitternacht
+
+
+
+                                    ; multiplizieren
+                                    mov cx,faktor__18_2
+
+                                    mov ax,si
+                                    mul cx
+
+                                    push ax
+                                      push dx
+
+                                        mov ax,di
+                                        mul cx
+
+                                      pop cx
+                                      add ax,cx
+                                    pop bx
+                                    adc bx,0 ; dx:ax:bx
+
+                                    ; dividieren
+                                    mov cx,divisor__18_2
+                                    div cx
+                                    ; Ergebnis in ax
+                                    ; Rest in dx
+
+                                    mov di,ax
+
+                                    mov ax,bx
+                                    div cx
+                                    mov si,ax ; di:si:=Takte seit Mitternacht
+
+                                  pop dx
+                                pop cx
+
+                                ; (unnîtig) mov ax,si
+                                mov bx,di
+                                sub ax,dx
+                                sbb bx,cx
+
+                                sub ax,18*Zeitschranke
+                                sbb bx,0
+
+                                cmp bh,0
+                                jnz geht_nicht_nach
+
+
+                                ; neu stellen
+                                mov dx,si ; lo
+                                mov cx,di ; hi
+
+                                push ds
+                                  mov ax,00040
+                                  mov ds,ax
+
+                                  ; fÅr nÑchste mal bitte bessere Werte ...
+                                  mov [0006c+0],dx
+                                  mov [0006c+2],cx
+                                  ; int 3
+                                pop ds
+
+geht_nicht_nach:
+                                mov w cs:[alter_cx_wert],cx
+                                mov b cs:[alter_dh_wert],dh
+
+                              pop bx
+                            pop ax
+                          pop di
+                        pop si
+
+                        iret
+tsr_ende:
+
+;***************************************************************************

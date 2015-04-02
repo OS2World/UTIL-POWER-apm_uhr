@@ -1,0 +1,68 @@
+; 11.03.1998 neues a86comde, textver꼗derung
+
+                        jmp einrichten
+
+include apm_uhri.a86
+include ..\lhtsr\lh.a86
+include ..\lhtsr\prg.a86
+
+programm_name:          db 'APM Uhr '
+programm_resident_ende: dw tsr_ende
+
+programm_int            equ 01a
+programm_int_neu        equ int_1a_neu
+programm_int_org        equ int_1a_org
+
+#if englisch
+
+installation_text:      db 'load powermanagment clock-corretion',00d,00a
+                        db '$'
+deinstallation_text:    db 'remove powermanagment clock-corretion',00d,00a
+                        db '$'
+doppelt_text:           db 'multiple install of powermanagment clock-corretion !',00d,00a
+                        db '$'
+nichtaktiv_text:        db 'powermanagment clock-corretion not found active in memory !',00d,00a
+                        db '$'
+titel:                  db 'APM-Uhr * clock-patch for motherboard with powermanagment',00d,00a
+
+#else
+
+installation_text:      db 'lade APM-Uhr-Korrektur',00d,00a
+                        db '$'
+deinstallation_text:    db 'entferne APM-Uhr-Korrektur',00d,00a
+                        db '$'
+doppelt_text:           db 'mehrfache Installation der APM-Uhr-Korrektur !',00d,00a
+                        db '$'
+nichtaktiv_text:        db 'APM-Uhr-Korrektur nicht aktiv im Speicher gefunden !',00d,00a
+                        db '$'
+titel:                  db 'APM-Uhr * Zeitkorrektur f걊 Platinen mit Stromsparmodus',00d,00a
+                        
+#endif
+                        db 'Veit Kannegieser * 29.08.1997頰11.03.1998',00d,00a
+                        db '$'
+
+einrichten:
+                        mov ah,009
+                        mov dx,titel
+                        int 021
+
+                        mov ah,02c
+                        int 021
+
+                        einfaches_tsr
+
+                        mov ah,02c
+                        int 021
+
+                        mov ax,04c00
+                        int 021
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+
+installations_prozedur:
+                        ret
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+
+deinstallations_prozedur:
+                        ret
